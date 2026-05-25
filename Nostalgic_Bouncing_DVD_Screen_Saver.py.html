@@ -1,0 +1,153 @@
+import turtle
+import time
+import random
+
+# =====================================================================
+# 1. WINDOW SETUP
+# =====================================================================
+WIDTH = 800
+HEIGHT = 600
+
+screen = turtle.Screen()
+screen.setup(width=WIDTH, height=HEIGHT)
+screen.title("Nostalgic Bouncing DVD Screen Saver")
+screen.bgcolor("black")
+
+# Turn off automatic animations for smooth, manual rendering
+screen.tracer(0)
+
+# Configure turtle to use 0-255 RGB color values
+screen.colormode(255)
+
+# =====================================================================
+# 2. COLOR & SHAPE CONFIGURATION
+# =====================================================================
+# Vibrant colors suitable for a dark background (avoiding pure black)
+VIBRANT_COLORS = [
+    (255, 51, 51),   # Neon Red
+    (51, 255, 51),   # Neon Green
+    (51, 51, 255),   # Neon Blue
+    (255, 255, 51),  # Neon Yellow
+    (255, 51, 255),  # Neon Magenta
+    (51, 255, 255),  # Neon Cyan
+    (255, 128, 0)    # Orange
+]
+
+def get_random_color(current_color):
+    """Returns a new random color that is different from the current one."""
+    available_colors = [c for c in VIBRANT_COLORS if c != current_color]
+    return random.choice(available_colors)
+
+# =====================================================================
+# 3. INITIALIZING THE MOVING OBJECTS (Multi-Object Bonus)
+# =====================================================================
+# Defining the half-dimensions of our bounding box
+HALF_W = WIDTH // 2
+HALF_H = HEIGHT // 2
+
+# Approximate half-sizes of our DVD logo object for collision padding
+# (Adjust these values if you use a custom shape or text)
+LOGO_HALF_WIDTH = 20
+LOGO_HALF_HEIGHT = 20
+
+num_logos = 3
+logos = []
+
+for _ in range(num_logos):
+    logo = turtle.Turtle()
+    logo.shape("square")  # Base shape; can be replaced with custom shapes
+    logo.shapesize(stretch_wid=2, stretch_len=2) # 40x40 pixels total
+    logo.penup()
+    
+    # Start at a random central position to avoid immediate wall glitched locks
+    start_x = random.randint(-100, 100)
+    start_y = random.randint(-100, 100)
+    logo.goto(start_x, start_y)
+    
+    # Assign an initial random color
+    initial_color = random.choice(VIBRANT_COLORS)
+    logo.color(initial_color)
+    
+    # Vector Mechanics: Assign unique dx and dy velocities
+    # Using distinct speeds ensures they don't move in perfect sync
+    dx = random.choice([-4, -3, 3, 4])
+    dy = random.choice([-4, -3, 3, 4])
+    
+    # Store all individual state properties in a dictionary
+    logos.append({
+        'turtle': logo,
+        'dx': dx,
+        'dy': dy,
+        'color': initial_color
+    })
+
+# =====================================================================
+# 4. THE GRAPHICS LOOP (Physics & Rendering)
+# =====================================================================
+running = True
+
+while running:
+    # Handle event loop updates natively
+    try:
+        for item in logos:
+            logo = item['turtle']
+            dx = item['dx']
+            dy = item['dy']
+            current_color = item['color']
+            
+            # Step 2 & 3: Update position coordinates via velocity variables
+            new_x = logo.xcor() + dx
+            new_y = logo.ycor() + dy
+            logo.goto(new_x, new_y)
+            
+            # Flags to track perfect corner hits
+            hit_x = False
+            hit_y = False
+            
+            # --- AABB Collision Detection ---
+            # Right & Left Boundary Walls
+            if new_x + LOGO_HALF_WIDTH >= HALF_W:
+                logo.setx(HALF_W - LOGO_HALF_WIDTH) # Snap to boundary to prevent escaping
+                dx = -dx
+                hit_x = True
+            elif new_x - LOGO_HALF_WIDTH <= -HALF_W:
+                logo.setx(-HALF_W + LOGO_HALF_WIDTH)
+                dx = -dx
+                hit_x = True
+                
+            # Top & Bottom Boundary Walls
+            if new_y + LOGO_HALF_HEIGHT >= HALF_H:
+                logo.sety(HALF_H - LOGO_HALF_HEIGHT)
+                dy = -dy
+                hit_y = True
+            elif new_y - LOGO_HALF_HEIGHT <= -HALF_H:
+                logo.sety(-HALF_H + LOGO_HALF_HEIGHT)
+                dy = -dy
+                hit_y = True
+                
+            # --- Color State Management & Corner Check ---
+            if hit_x or hit_y:
+                new_color = get_random_color(current_color)
+                logo.color(new_color)
+                item['color'] = new_color
+                
+                # Bonus Challenge: Corner Hit Detection
+                if hit_x and hit_y:
+                    print("🎉 PERFECT CORNER HIT! 🎉")
+                    # Quick visual flash effect
+                    screen.bgcolor("white")
+                    screen.update()
+                    time.sleep(0.05)
+                    screen.bgcolor("black")
+            
+            # Save the updated velocity directions back to the dictionary
+            item['dx'] = dx
+            item['dy'] = dy
+            
+        # Step 4: Frame Rendering
+        screen.update()
+        time.sleep(0.016)  # Cap frame rate at roughly 60 FPS
+        
+    except turtle.Terminator:
+        # Gracefully handle window closures without throwing errors
+        running = False
